@@ -11,10 +11,11 @@ from deepspeed.moe.utils import split_params_grads_into_shared_and_expert_params
 import torch
 from torch._utils import _flatten_dense_tensors
 
-from deepspeed.runtime import DeepSpeedOptimizer
-from deepspeed.runtime.utils import get_global_norm, CheckOverflow, get_weight_norm, required_torch_version
+from deepspeed.runtime.base_optimizer import DeepSpeedOptimizer
+from deepspeed.runtime.utils import get_global_norm, CheckOverflow, get_weight_norm
 from deepspeed.runtime.fp16.loss_scaler import INITIAL_LOSS_SCALE, SCALE_WINDOW, MIN_LOSS_SCALE
 from deepspeed.utils import logger
+from deepspeed.utils.torch import required_torch_version
 from deepspeed.checkpoint.constants import OPTIMIZER_STATE_DICT
 from deepspeed.accelerator import get_accelerator
 from deepspeed import comm as dist
@@ -110,7 +111,7 @@ class FP16_UnfusedOptimizer(DeepSpeedOptimizer):
 
         self.initialize_optimizer_states()
 
-    def zero_grad(self, set_to_none=False):
+    def zero_grad(self, set_to_none=True):
         """
         Zero FP16 parameter grads.
         """
@@ -216,7 +217,7 @@ class FP16_UnfusedOptimizer(DeepSpeedOptimizer):
                 norm_group_value = get_weight_norm(grads_for_norm, mpu=self.mpu)
             norm_groups.append(norm_group_value)
 
-            # copying gradients to fp32 to wor  k with fp32 parameters
+            # copying gradients to fp32 to work with fp32 parameters
             for fp32_param, fp16_param in zip(self.fp32_groups[i], self.fp16_groups[i]):
                 if fp16_param.grad is None:
                     fp32_param.grad = torch.zeros(fp16_param.size(), dtype=fp32_param.dtype, device=fp32_param.device)

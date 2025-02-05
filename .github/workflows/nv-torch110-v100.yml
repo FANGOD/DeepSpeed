@@ -1,6 +1,7 @@
 name: nv-torch110-v100
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: "0 0 * * *"
 
@@ -16,8 +17,10 @@ jobs:
   unit-tests:
     runs-on: [self-hosted, nvidia, cu111, v100]
 
+    env: {ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true} # Allow using Node16 actions
+
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - id: setup-venv
         uses: ./.github/workflows/setup-venv
@@ -54,7 +57,7 @@ jobs:
           pytest $PYTEST_OPTS --forked -m 'sequential' unit/ --torch_ver="1.10" --cuda_ver="11"
 
       - name: Open GitHub issue if nightly CI fails
-        if: failure()
+        if: ${{ failure() && (github.event_name == 'schedule') }}
         uses: JasonEtco/create-an-issue@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
